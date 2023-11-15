@@ -54,4 +54,3 @@ class StudentDataService(BaseDataService):
                 result.append(s)
 
         return result
-
