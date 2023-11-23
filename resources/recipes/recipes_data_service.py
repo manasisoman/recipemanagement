@@ -76,6 +76,32 @@ class RecipeDataService():
         
         # return the new recipe's ID
         return new_recipe_id
+    
+    def filter(self, objects_filter):
+        filter_mappings = {
+            'title': 'title',
+            'author': 'author_id',
+            'ingredient': 'ingredients'
+        }
+
+        filters = objects_filter.split(',') # go through each of the possible fields 
+        filtered_recipes = self.recipes
+
+        for f in filters:
+            filter_parts = f.split(':')
+            if len(filter_parts) == 2 and filter_parts[0] in filter_mappings:
+                field = filter_mappings[filter_parts[0]]
+                value = filter_parts[1].lower()
+                print('field', field, 'value', value)
+
+                if field == 'ingredients':
+                    filtered_recipes = [r for r in filtered_recipes if any(value in ing.lower() for ing in r.get('ingredients'))]
+                elif field == 'author_id':
+                    filtered_recipes = [r for r in filtered_recipes if value in r.get('author_id', '').lower()]
+                elif field == 'title':
+                    filtered_recipes = [r for r in filtered_recipes if value in r.get('title', '').lower()]
+
+        return filtered_recipes
 
 
     def get_unique_id(self):

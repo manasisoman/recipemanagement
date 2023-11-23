@@ -30,11 +30,30 @@ class RecipeResource():
     def get_recipes(self, recipe_id: str = None, title: str = None, author_id: str = None) -> List[RecipeRspModel]:
         result = self.data_service.get_recipes(recipe_id, title, author_id)
         final_result = []
+        print('getting recipes by parameter')
 
         for r in result:
             m = self.generate_links(r)
             final_result.append(m)
         
+        return final_result
+
+    def filter_recipes(self, objects_filter: str):
+        print('getting recipes by query string')
+        # call data service function to filter the recipes and get the result
+        print('this is the obj filter', objects_filter)
+        result = self.data_service.filter(objects_filter)
+        print('the resulting result is')
+        print(result)
+        
+        final_result = []
+        
+        # generate the strings for each element in the result
+        for r in result:
+            m = self.generate_links(r)
+            final_result.append(m)
+        
+        # return the final result 
         return final_result
     
     def add_recipe(self, recipe_info: dict) -> RecipeRspModel:
@@ -57,6 +76,9 @@ class RecipeResource():
         return recipe_with_links
         # except Exception as e:
         #     raise HTTPException(status_code=500, detail="could not return links")
+
+        
+
 
 
 

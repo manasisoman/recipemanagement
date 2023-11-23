@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from fastapi.staticfiles import StaticFiles
@@ -42,11 +42,17 @@ async def root():
     return RedirectResponse("/static/index.html")
     #return RedirectResponse("/static/testing.html")
 
-# Retrieve a list of recipes matching the query string 
+# Retrieve a list of recipes matching the query string OR given parameters
 @app.get("/recipes", response_model=List[RecipeRspModel])
-def get_recipes(recipe_id: str = None, title: str = None, author_id: str = None) -> List[RecipeRspModel]:
+def get_recipes(recipe_id: str = None, 
+                title: str = None, 
+                author_id: str = None, 
+                objects_filter: str = Query(default='')) -> List[RecipeRspModel]:
+    if objects_filter:
+        filtered_recipes = recipes_resource.filter_recipes(objects_filter)
+        return filtered_recipes
+    
     result = recipes_resource.get_recipes(recipe_id, title, author_id)
-    print(result)
     return result
 
 # Retrieve a specific recipe by ID
@@ -57,15 +63,6 @@ async def get_recipe(recipe_id: str):
             return recipe
     raise HTTPException(status_code=404, detail="Not found")
         
-    # result = None
-    # result = 
-    # if len(result) == 1:
-    #     result = result[0]
-    # else:
-    #     raise HTTPException(status_code=404, detail="Not found")
-    
-    # return result
-
 # Add a new recipe
 @app.post("/recipes", response_model=Union[RecipeRspModel, None])
 async def add_recipe(new_recipe: dict):
