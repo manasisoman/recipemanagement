@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from fastapi.staticfiles import StaticFiles
@@ -42,11 +42,17 @@ async def root():
     return RedirectResponse("/static/index.html")
     #return RedirectResponse("/static/testing.html")
 
-# Retrieve a list of recipes matching the query string 
+# Retrieve a list of recipes matching the query string OR given parameters
 @app.get("/recipes", response_model=List[RecipeRspModel])
-def get_recipes(recipe_id: str = None, title: str = None, author_id: str = None) -> List[RecipeRspModel]:
+def get_recipes(recipe_id: str = None, 
+                title: str = None, 
+                author_id: str = None, 
+                objects_filter: str = Query(default='')) -> List[RecipeRspModel]:
+    if objects_filter:
+        filtered_recipes = recipes_resource.filter_recipes(objects_filter)
+        return filtered_recipes
+    
     result = recipes_resource.get_recipes(recipe_id, title, author_id)
-    print(result)
     return result
 
 # Retrieve a specific recipe by ID
@@ -57,15 +63,6 @@ async def get_recipe(recipe_id: str):
             return recipe
     raise HTTPException(status_code=404, detail="Not found")
         
-    # result = None
-    # result = 
-    # if len(result) == 1:
-    #     result = result[0]
-    # else:
-    #     raise HTTPException(status_code=404, detail="Not found")
-    
-    # return result
-
 # Add a new recipe
 @app.post("/recipes", response_model=Union[RecipeRspModel, None])
 async def add_recipe(new_recipe: dict):
@@ -75,22 +72,16 @@ async def add_recipe(new_recipe: dict):
     return result
 
 # Update an existing recipe
+@app.put("/recipes/{recipe_id}", response_model=RecipeRspModel)
+async def modify_recipe(recipe_id: str, field: str, new_value: Union[str, list]):
+    result = recipes_resource.modify_recipe(recipe_id, field, new_value)
+    return result
 
-# # Add a new recipe
-# @app.post("/recipes", response_model=dict)
-# async def add_recipe(new_recipe: dict):
-#     recipes.append(new_recipe)
-#     return new_recipe
-
-# # Update an existing recipe
-# @app.put("/recipes/{recipe_id}", response_model=dict)
-# async def update_recipe(recipe_id: str, updated_recipe: dict):
-#     for i, recipe in enumerate(recipes):
-#         if recipe["recipe_id"] == recipe_id:
-#             recipes[i] = updated_recipe
-#             return updated_recipe
-#     raise HTTPException(status_code=404, detail="Recipe not found")
-
+# Delete a recipe
+@app.delete("/recipes", response_model=RecipeRspModel)
+async def delete_recipe(recipe_id: str):
+    result = recipes_resource.delete_recipe(recipe_id)
+    return result
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8011)
