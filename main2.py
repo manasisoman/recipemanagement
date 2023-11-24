@@ -72,22 +72,16 @@ async def add_recipe(new_recipe: dict):
     return result
 
 # Update an existing recipe
+@app.put("/recipes/{recipe_id}", response_model=RecipeRspModel)
+async def modify_recipe(recipe_id: str, field: str, new_value: Union[str, list]):
+    result = recipes_resource.modify_recipe(recipe_id, field, new_value)
+    return result
 
-# # Add a new recipe
-# @app.post("/recipes", response_model=dict)
-# async def add_recipe(new_recipe: dict):
-#     recipes.append(new_recipe)
-#     return new_recipe
-
-# # Update an existing recipe
-# @app.put("/recipes/{recipe_id}", response_model=dict)
-# async def update_recipe(recipe_id: str, updated_recipe: dict):
-#     for i, recipe in enumerate(recipes):
-#         if recipe["recipe_id"] == recipe_id:
-#             recipes[i] = updated_recipe
-#             return updated_recipe
-#     raise HTTPException(status_code=404, detail="Recipe not found")
-
+# Delete a recipe
+@app.delete("/recipes", response_model=RecipeRspModel)
+async def delete_recipe(recipe_id: str):
+    result = recipes_resource.delete_recipe(recipe_id)
+    return result
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8011)

@@ -77,6 +77,28 @@ class RecipeResource():
         # except Exception as e:
         #     raise HTTPException(status_code=500, detail="could not return links")
 
+    def modify_recipe(self, recipe_id, field, new_value):
+        if self.data_service.check_id_exists(self, recipe_id):
+            id = self.data_service.modify_recipe_by_field(recipe_id, field, new_value)
+            modified_recipe = self.data_service.get_recipe_by_id(str(id))
+            link = self.generate_links(modified_recipe)
+            return link
+        else:
+            raise HTTPException(status_code=500, detail="Recipe ID does not exist")
+        
+    def delete_recipe(self, recipe_id):
+        if self.data_service.check_id_exists(recipe_id):
+            result = self.data_service.delete_recipe(recipe_id)
+            print('this is what delete returned', result)
+            link = self.generate_links(result)
+            return link
+        else:
+            raise HTTPException(status_code=500, detail="Recipe ID does not exist")
+        
+
+
+
+
         
 
 

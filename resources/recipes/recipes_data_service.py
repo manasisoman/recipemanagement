@@ -56,6 +56,19 @@ class RecipeDataService():
 
         return result
     
+    def get_all_recipes(self):
+        result = []
+        for r in self.recipes:
+            result.append(r)
+        return result
+
+
+    def check_id_exists(self, recipe_id):
+        for r in self.recipes:
+            if r.get("recipe_id", None) == recipe_id:
+                return True
+        
+        return False
     
     def add_recipes(self, recipe_info: dict):
         """
@@ -76,6 +89,45 @@ class RecipeDataService():
         
         # return the new recipe's ID
         return new_recipe_id
+    
+    def modify_recipe_by_field(self, recipe_id, field, new_value):
+        """
+        This will modify the recipe in the DB
+        """
+        old_recipe = {}
+        # pull the recipe from the DB
+        for r in self.recipes:
+            if r.get("recipe_id") == recipe_id:
+                old_recipe = r
+                self.recipes.remove(r)
+                break
+
+        # Handle special case for field with lists
+        if field == "steps" or field == "ingredients" or field == "images":
+            if isinstance(new_value, str):
+                # Convert a string to a list separated by commas (for example)
+                new_value = new_value.split(",")  # You might need a different delimiter
+            elif not isinstance(new_value, list):
+                # If it's neither a string nor a list, handle accordingly
+                new_value = [new_value]  # Put the single value into a list
+
+        # modify the field, update, and save
+        old_recipe[field] = new_value
+        self.recipes.append(old_recipe)
+        self.save()
+
+        return recipe_id
+    
+    def delete_recipe(self, recipe_id):
+        removed_recipe = {}
+        for r in self.recipes:
+            if r.get("recipe_id") == recipe_id:
+                removed_recipe = r
+                self.recipes.remove(r)
+                self.save()
+
+        return removed_recipe
+
     
     def filter(self, objects_filter):
         filter_mappings = {
