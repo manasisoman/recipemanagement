@@ -1,118 +1,87 @@
-#
-# FastAPI is a framework and library for implementing REST web services in Python.
-# https://fastapi.tiangolo.com/
-#
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from fastapi.staticfiles import StaticFiles
 from typing import List, Union
 
-# I like to launch directly and not use the standard FastAPI startup process.
-# So, I include uvicorn
 import uvicorn
 
-
-from resources.students.students_resource import StudentsResource
-from resources.students.students_data_service import StudentDataService
-from resources.students.student_models import StudentModel, StudentRspModel
-from resources.schools.school_models import SchoolRspModel, SchoolModel
-from resources.schools.schools_resource import SchoolsResource
+from resources.recipes.recipes_resource import RecipeResource
+from resources.recipes.recipes_data_service import RecipeDataService
+from resources.recipes.recipe_models import RecipeModel, RecipeRspModel
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-# ******************************
-#
-# DFF TODO Show the class how to do this with a service factory instead of hard code.
-
+# supposedly, this will help serve static files
+# if we want to serve HTML files we can do so from here?
 
 def get_data_service():
 
     config = {
         "data_directory": "data",
-        "data_file": "students.json"
+        "data_file": "recipes.json"
     }
 
-    ds = StudentDataService(config)
+    ds = RecipeDataService(config)
     return ds
 
-
-def get_student_resource():
+def get_recipe_resource():
     ds = get_data_service()
     config = {
         "data_service": ds
     }
-    res = StudentsResource(config)
+    res = RecipeResource(config)
     return res
 
-
-students_resource = get_student_resource()
-
-schools_resource = SchoolsResource(config={"students_resource": students_resource})
-
-
-#
-# END TODO
-# **************************************
-
+recipes_resource = get_recipe_resource()
 
 @app.get("/")
 async def root():
+    # redirecting to a default page
     return RedirectResponse("/static/index.html")
+    #return RedirectResponse("/static/testing.html")
 
-
-@app.get("/students", response_model=List[StudentRspModel])
-async def get_students(uni: str = None, last_name: str = None, school_code: str = None):
-    """
-    Return a list of students matching a query string.
-
-    - **uni**: student's UNI
-    - **last_name**: student's last name
-    - **school_code**: student's school.
-    """
-    result = students_resource.get_students(uni, last_name, school_code)
+# Retrieve a list of recipes matching the query string OR given parameters
+@app.get("/recipes", response_model=List[RecipeRspModel])
+def get_recipes(recipe_id: str = None, 
+                title: str = None, 
+                author_id: str = None, 
+                objects_filter: str = Query(default='')) -> List[RecipeRspModel]:
+    if objects_filter:
+        filtered_recipes = recipes_resource.filter_recipes(objects_filter)
+        return filtered_recipes
+    
+    result = recipes_resource.get_recipes(recipe_id, title, author_id)
     return result
 
-
-@app.get("/students/{uni}", response_model=Union[StudentRspModel, None])
-async def get_student(uni: str):
-    """
-    Return a student based on UNI.
-
-    - **uni**: student's UNI
-    """
-    result = None
-    result = students_resource.get_students(uni)
-    if len(result) == 1:
-        result = result[0]
-    else:
-        raise HTTPException(status_code=404, detail="Not found")
-
+# Retrieve a specific recipe by ID
+@app.get("/recipes/{recipe_id}", response_model=Union[RecipeRspModel, None])
+async def get_recipe(recipe_id: str):
+    for recipe in recipes_resource.get_recipes():
+        if recipe.recipe_id == recipe_id:
+            return recipe
+    raise HTTPException(status_code=404, detail="Not found")
+        
+# Add a new recipe
+@app.post("/recipes", response_model=Union[RecipeRspModel, None])
+async def add_recipe(new_recipe: dict):
+    print("HERE")
+    result = recipes_resource.add_recipe(new_recipe)
+    print("HERE2")
     return result
 
-
-@app.get("/schools", response_model=List[SchoolRspModel])
-async def get_schools():
-    """
-    Return a list of schools.
-    """
-    result = schools_resource.get_schools()
+# Update an existing recipe
+@app.put("/recipes/{recipe_id}", response_model=RecipeRspModel)
+async def modify_recipe(recipe_id: str, field: str, new_value: Union[str, list]):
+    result = recipes_resource.modify_recipe(recipe_id, field, new_value)
     return result
 
-
-@app.get("/schools/{school_code}/students", response_model=List[StudentRspModel])
-async def get_schools_students(school_code, uni=None, last_name=None):
-    """
-    Return a list of schools.
-    """
-    result = schools_resource.get_schools_students(school_code, uni, last_name)
+# Delete a recipe
+@app.delete("/recipes", response_model=RecipeRspModel)
+async def delete_recipe(recipe_id: str):
+    result = recipes_resource.delete_recipe(recipe_id)
     return result
-
-
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8011)
