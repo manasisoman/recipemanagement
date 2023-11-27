@@ -78,7 +78,7 @@ class RecipeResource():
         #     raise HTTPException(status_code=500, detail="could not return links")
 
     def modify_recipe(self, recipe_id, field, new_value):
-        if self.data_service.check_id_exists(self, recipe_id):
+        if self.data_service.check_id_exists(recipe_id):
             id = self.data_service.modify_recipe_by_field(recipe_id, field, new_value)
             modified_recipe = self.data_service.get_recipe_by_id(str(id))
             link = self.generate_links(modified_recipe)
