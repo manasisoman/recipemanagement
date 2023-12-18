@@ -10,7 +10,21 @@ from resources.recipes.recipes_resource import RecipeResource
 from resources.recipes.recipes_data_service import RecipeDataService
 from resources.recipes.recipe_models import RecipeModel, RecipeRspModel
 
+#added by manasi
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+#added by manasi
+origins = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials = True,
+    allow_methods = ["*"],
+    allow_headers = ["*"],
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # supposedly, this will help serve static files
@@ -58,10 +72,9 @@ def get_recipes(recipe_id: str = None,
 # Retrieve a specific recipe by ID
 @app.get("/recipes/{recipe_id}", response_model=Union[RecipeRspModel, None])
 async def get_recipe(recipe_id: str):
-    for recipe in recipes_resource.get_recipes():
-        if recipe.recipe_id == recipe_id:
-            return recipe
-    raise HTTPException(status_code=404, detail="Not found")
+    recipe = recipes_resource.get_recipe_by_id(recipe_id)
+    print('recipe returned:', recipe)
+    return recipe
         
 # Add a new recipe
 @app.post("/recipes", response_model=Union[RecipeRspModel, None])
