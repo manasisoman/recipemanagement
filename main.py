@@ -31,13 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # if we want to serve HTML files we can do so from here?
 
 def get_data_service():
-
-    config = {
-        "data_directory": "data",
-        "data_file": "recipes.json"
-    }
-
-    ds = RecipeDataService(config)
+    ds = RecipeDataService()
     return ds
 
 def get_recipe_resource():
@@ -54,7 +48,6 @@ recipes_resource = get_recipe_resource()
 async def root():
     # redirecting to a default page
     return RedirectResponse("/static/index.html")
-    #return RedirectResponse("/static/testing.html")
 
 # Retrieve a list of recipes matching the query string OR given parameters
 @app.get("/recipes", response_model=List[RecipeRspModel])
@@ -72,7 +65,8 @@ def get_recipes(recipe_id: str = None,
 # Retrieve a specific recipe by ID
 @app.get("/recipes/{recipe_id}", response_model=Union[RecipeRspModel, None])
 async def get_recipe(recipe_id: str):
-    recipe = recipes_resource.get_recipe_by_id(recipe_id)
+    print('recipe to find:', recipe_id)
+    recipe = recipes_resource.get_one_recipe(recipe_id)
     print('recipe returned:', recipe)
     return recipe
         
@@ -95,6 +89,7 @@ async def modify_recipe(recipe_id: str, field: str, new_value: Union[str, list])
 async def delete_recipe(recipe_id: str):
     result = recipes_resource.delete_recipe(recipe_id)
     return result
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8011)
