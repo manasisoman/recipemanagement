@@ -1,3 +1,5 @@
 fastapi
 uvicorn
 python-multipart==0.0.5
+mysql-connector-python
+

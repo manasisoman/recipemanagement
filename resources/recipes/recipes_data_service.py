@@ -1,67 +1,102 @@
 import json
+import mysql.connector
 
 class RecipeDataService():
-    def __init__(self, config: dict):
+    def __init__(self):
+        self.connection = self.get_connection()
 
-        self.data_dir = config['data_directory']
-        self.data_file = config["data_file"]
-        self.recipes = []
-        self.highest_recipe_id = None
+    def get_connection(self):
+        return mysql.connector.connect(
+            user="admin",
+            password="cloudymeatball",
+            host="recipediadb.c52h6qfa4sj1.us-east-1.rds.amazonaws.com",
+            port="3306",
+            database="recipesDB"
+        )
 
-        self.load()
-
-    def get_data_file_name(self):
-        filename =  self.data_dir + "/" + self.data_file
-        return filename
+    # def get_data_file_name(self):
+    #     filename =  self.data_dir + "/" + self.data_file
+    #     return filename
     
-    def load(self):
-        file_name = self.get_data_file_name()
-        with open(file_name, "r") as file:
-            self.recipes = json.load(file)
+    # def load(self):
+    #     file_name = self.get_data_file_name()
+    #     with open(file_name, "r") as file:
+    #         self.recipes = json.load(file)
         
-        for recipe in self.recipes:
-            id = int(recipe.get("recipe_id"))
-            if not self.highest_recipe_id or id > self.highest_recipe_id:
-                self.highest_recipe_id = id
+    #     for recipe in self.recipes:
+    #         id = int(recipe.get("recipe_id"))
+    #         if not self.highest_recipe_id or id > self.highest_recipe_id:
+    #             self.highest_recipe_id = id
 
-    def save(self):
-        file_name = self.get_data_file_name()
-        with open(file_name, "w") as out_file:
-            json.dump(self.recipes, out_file)
-
-    def get_recipes(self, recipe_id: str = None, title: str = None, author_id: str = None):
+    # def save(self):
+    #     file_name = self.get_data_file_name()
+    #     with open(file_name, "w") as out_file:
+    #         json.dump(self.recipes, out_file)
+    
+    def get_recipes(self, recipe_id: int = None, title: str = None, author_id: str = None):
         """
         Get recipes that match a recipe_id, title, and/or an author_id
         """
-        result = []
+        try:
+            query = "SELECT * FROM recipes WHERE "
+            conditions = []
+            params = []
+            if recipe_id is not None:
+                conditions.append("recipe_id = %s")
+                params.append(recipe_id)
 
-        for r in self.recipes:
-            if (recipe_id is None or (r.get("recipe_id", None) == recipe_id)) and \
-                    (title is None or (r.get("title", None) == title)) and \
-                    (author_id is None or (r.get("author_id", None) == author_id)):
-                result.append(r)
+            if title is not None:
+                conditions.append("title = %s")
+                params.append(title)
 
-        return result
-    
-    def get_recipe_by_id(self, recipe_id: str = None):
+            if author_id is not None:
+                conditions.append("author_id = %s")
+                params.append(author_id)
+            
+            if conditions:
+                query += " AND ".join(conditions)
+            else:
+                query = query.replace(" WHERE ", "")  # if no conditions, remove WHERE clause
+
+            cursor = self.connection.cursor()
+            cursor.execute(query, tuple(params))
+            recipes = cursor.fetchall()
+            print(recipes)
+            cursor.close()
+            return recipes
+        except mysql.connector.Error as e:
+            print("Error fetching recipes:", e)
+            return []
+
+    def get_recipe_by_id(self, recipe_id):
         """
         Get recipes that match a recipe_id
         """
-        result = {}
+        if recipe_id is None:
+            return None  # or you can choose to return an empty dict {}
 
-        for r in self.recipes:
-            if (recipe_id is None or (r.get("recipe_id", None) == recipe_id)):
-                print("this is r", r)
-                return r
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s", (recipe_id,))
+            recipe = cursor.fetchone()
+            print(recipe)
+            cursor.close()
+            return recipe
+        except mysql.connector.Error as e:
+            print("Recipe ID", e)
+            print("Error in fetching recipe by id:", e)
+            return None
 
-        return result
-    
     def get_all_recipes(self):
-        result = []
-        for r in self.recipes:
-            result.append(r)
-        return result
-
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM recipes")
+            recipes = cursor.fetchall()
+            cursor.close()
+            print(recipes)
+            return recipes
+        except mysql.connector.Error as e:
+            print("Error fetching all recipes", e)
 
     def check_id_exists(self, recipe_id):
         for r in self.recipes:
@@ -163,10 +198,23 @@ class RecipeDataService():
 
         return new_id
 
+def main():
+    print("----------------------------------------------")
+    db = RecipeDataService()
+    print("----------------------------------------------")
+    print("Get recipe by id")
+    db.get_recipe_by_id(1)
+    print("----------------------------------------------")
+    print("Get recipes")
+    db.get_recipes()
+    print("----------------------------------------------")
+    print("Get all recipes")
+    db.get_all_recipes()
 
 
 
 
-
+if __name__ == "__main__":
+    main()
 
         

@@ -10,20 +10,28 @@ from resources.recipes.recipes_resource import RecipeResource
 from resources.recipes.recipes_data_service import RecipeDataService
 from resources.recipes.recipe_models import RecipeModel, RecipeRspModel
 
+#added by manasi
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+#added by manasi
+origins = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = origins,
+    allow_credentials = True,
+    allow_methods = ["*"],
+    allow_headers = ["*"],
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # supposedly, this will help serve static files
 # if we want to serve HTML files we can do so from here?
 
 def get_data_service():
-
-    config = {
-        "data_directory": "data",
-        "data_file": "recipes.json"
-    }
-
-    ds = RecipeDataService(config)
+    ds = RecipeDataService()
     return ds
 
 def get_recipe_resource():
@@ -40,7 +48,6 @@ recipes_resource = get_recipe_resource()
 async def root():
     # redirecting to a default page
     return RedirectResponse("/static/index.html")
-    #return RedirectResponse("/static/testing.html")
 
 # Retrieve a list of recipes matching the query string OR given parameters
 @app.get("/recipes", response_model=List[RecipeRspModel])
@@ -58,10 +65,10 @@ def get_recipes(recipe_id: str = None,
 # Retrieve a specific recipe by ID
 @app.get("/recipes/{recipe_id}", response_model=Union[RecipeRspModel, None])
 async def get_recipe(recipe_id: str):
-    for recipe in recipes_resource.get_recipes():
-        if recipe.recipe_id == recipe_id:
-            return recipe
-    raise HTTPException(status_code=404, detail="Not found")
+    print('recipe to find:', recipe_id)
+    recipe = recipes_resource.get_one_recipe(recipe_id)
+    print('recipe returned:', recipe)
+    return recipe
         
 # Add a new recipe
 @app.post("/recipes", response_model=Union[RecipeRspModel, None])
@@ -82,6 +89,7 @@ async def modify_recipe(recipe_id: str, field: str, new_value: Union[str, list])
 async def delete_recipe(recipe_id: str):
     result = recipes_resource.delete_recipe(recipe_id)
     return result
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8011)

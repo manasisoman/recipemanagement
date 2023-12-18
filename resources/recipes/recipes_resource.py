@@ -9,34 +9,51 @@ class RecipeResource():
     
     @staticmethod
     def generate_links(info: dict) -> RecipeRspModel:
+        print("INFO IS: ", info)
+        keys = ['recipe_id', 'title', 'author_id', 'ingredients', 'steps', 'images']
+
+        if not info:
+            return None
+        info = {keys[i]: info[i] for i in range(len(keys))}
+
         self_link = Link(**{
             "rel": "self",
-            "href": "/recipes/" + info['recipe_id']
+            "href": "/recipes/" + str(info['recipe_id'])
         })
-        """
-        user_link = Link(**{
-            "rel": "user",
-            "href": "/users/" + info['author_id']       
-        })
-        """
+
         
-        links = [
-            self_link, 
-        ]
+        links = [self_link]
 
         rsp = RecipeRspModel(**info, links=links)
         return rsp
 
-    def get_recipes(self, recipe_id: str = None, title: str = None, author_id: str = None) -> List[RecipeRspModel]:
+    def get_recipes(self, recipe_id = None, title = None, author_id = None) -> List[RecipeRspModel]:
+        print('getting recipes')
         result = self.data_service.get_recipes(recipe_id, title, author_id)
+        print('received result:', result)
         final_result = []
-        print('getting recipes by parameter')
 
         for r in result:
             m = self.generate_links(r)
             final_result.append(m)
+
+        print('final result:', final_result)
         
         return final_result
+    
+    def get_one_recipe(self, recipe_id):
+        print('get one recipe')
+        result = self.data_service.get_recipe_by_id(recipe_id)
+        final_result = []
+        print('got the result from the data service', result)
+
+        m = self.generate_links(result)
+
+        # for r in result:
+        #     m = self.generate_links(r)
+        #     final_result.append(m)
+
+        return m
 
     def filter_recipes(self, objects_filter: str):
         print('getting recipes by query string')
@@ -94,13 +111,3 @@ class RecipeResource():
             return link
         else:
             raise HTTPException(status_code=500, detail="Recipe ID does not exist")
-        
-
-
-
-
-        
-
-
-
-
