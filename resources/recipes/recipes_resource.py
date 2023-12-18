@@ -56,22 +56,17 @@ class RecipeResource():
         return m
 
     def filter_recipes(self, objects_filter: str):
-        print('getting recipes by query string')
-        # call data service function to filter the recipes and get the result
-        print('this is the obj filter', objects_filter)
+        print('Getting recipes by query string')
+        print('This is the obj filter', objects_filter)
+
+        # Call data service function to filter the recipes and get the result
         result = self.data_service.filter(objects_filter)
-        print('the resulting result is')
-        print(result)
-        
-        final_result = []
-        
-        # generate the strings for each element in the result
-        for r in result:
-            m = self.generate_links(r)
-            final_result.append(m)
-        
-        # return the final result 
+
+        print('The resulting result is:', result)
+        final_result = [self.generate_links(r) for r in result]
+
         return final_result
+
     
     def add_recipe(self, recipe_info: dict) -> RecipeRspModel:
         # Call the data service method to add the recipe

@@ -188,30 +188,50 @@ class RecipeDataService():
             print("Error deleting recipe from the database:", e)
             return None  # or False to indicate failure
 
-    def filter(self, objects_filter):
-        filter_mappings = {
-            'title': 'title',
-            'author': 'author_id',
-            'ingredient': 'ingredients'
-        }
+    # def filter(self, objects_filter):
+    #     filter_mappings = {
+    #         'title': 'title',
+    #         'author': 'author_id',
+    #         'ingredient': 'ingredients'
+    #     }
 
-        filters = objects_filter.split(',')
-        query = "SELECT * FROM recipes"
-        conditions = []
-        params = []
+    #     filters = objects_filter.split(',')
+    #     query = "SELECT * FROM recipes"
+    #     conditions = []
+    #     params = []
 
-        for f in filters:
-            filter_parts = f.split(':')
-            if len(filter_parts) == 2 and filter_parts[0] in filter_mappings:
-                field = filter_mappings[filter_parts[0]]
-                value = filter_parts[1].lower()
+    #     for f in filters:
+    #         filter_parts = f.split(':')
+    #         if len(filter_parts) == 2 and filter_parts[0] in filter_mappings:
+    #             field = filter_mappings[filter_parts[0]]
+    #             value = filter_parts[1].lower()
 
-                if field in ['title', 'author_id', 'ingredients']:
-                    conditions.append(f"LOWER({field}) LIKE %s")
-                    params.append(f"%{value}%")
+    #             if field in ['title', 'author_id', 'ingredients']:
+    #                 conditions.append(f"LOWER({field}) LIKE %s")
+    #                 params.append(f"%{value}%")
 
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+    #     if conditions:
+    #         query += " WHERE " + " AND ".join(conditions)
+
+    #     try:
+    #         cursor = self.connection.cursor()
+    #         cursor.execute(query, params)
+    #         filtered_recipes = cursor.fetchall()
+    #         cursor.close()
+    #         return filtered_recipes
+    #     except mysql.connector.Error as e:
+    #         print("Error in filtering recipes", e)
+    #         return []
+        
+    def filter(self, search_term):
+        query = """
+        SELECT * FROM recipes
+        WHERE LOWER(title) LIKE %s
+        OR LOWER(author_id) LIKE %s
+        OR LOWER(ingredients) LIKE %s
+        """
+        search_like_term = f"%{search_term.lower()}%"
+        params = [search_like_term, search_like_term, search_like_term]
 
         try:
             cursor = self.connection.cursor()
