@@ -73,9 +73,8 @@ async def get_recipe(recipe_id: str):
 # Add a new recipe
 @app.post("/recipes", response_model=Union[RecipeRspModel, None])
 async def add_recipe(new_recipe: dict):
-    print("HERE")
+    print('new recipe to add:', new_recipe)
     result = recipes_resource.add_recipe(new_recipe)
-    print("HERE2")
     return result
 
 # Update an existing recipe

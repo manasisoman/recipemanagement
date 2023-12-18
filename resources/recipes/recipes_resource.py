@@ -75,29 +75,24 @@ class RecipeResource():
     
     def add_recipe(self, recipe_info: dict) -> RecipeRspModel:
         # Call the data service method to add the recipe
+        print('recipe_info', recipe_info)
         new_recipe_id = self.data_service.add_recipes(recipe_info)
         print("new recipe id: ", new_recipe_id)
-        # except Exception as e:
-        #     raise HTTPException(status_code=500, detail="could not add recipe to data service")
-        
+
 
         # Retrieve the added recipe by ID -> JSON object
-        added_recipe = self.data_service.get_recipe_by_id(str(new_recipe_id))
+        added_recipe = self.data_service.get_recipe_by_id(new_recipe_id)
         print("json obj: ", added_recipe)
-        # except Exception as e:
-        #     raise HTTPException(status_code=500, detail="could not retreive recipe by ID")
-        
+
         # Generate links for the added recipe
         recipe_with_links = self.generate_links(added_recipe)
-        print("links: ", recipe_with_links)
+
         return recipe_with_links
-        # except Exception as e:
-        #     raise HTTPException(status_code=500, detail="could not return links")
 
     def modify_recipe(self, recipe_id, field, new_value):
         if self.data_service.check_id_exists(recipe_id):
             id = self.data_service.modify_recipe_by_field(recipe_id, field, new_value)
-            modified_recipe = self.data_service.get_recipe_by_id(str(id))
+            modified_recipe = self.data_service.get_recipe_by_id(id)
             link = self.generate_links(modified_recipe)
             return link
         else:

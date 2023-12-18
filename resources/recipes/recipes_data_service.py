@@ -99,71 +99,95 @@ class RecipeDataService():
             print("Error fetching all recipes", e)
 
     def check_id_exists(self, recipe_id):
-        for r in self.recipes:
-            if r.get("recipe_id", None) == recipe_id:
-                return True
-        
-        return False
+        """
+        Checks if a given recipe_id exists in the database.
+        """
+        try:
+            cursor = self.connection.cursor()
+            query = "SELECT COUNT(*) FROM recipes WHERE recipe_id = %s"
+            cursor.execute(query, (recipe_id,))
+            (count,) = cursor.fetchone()
+            cursor.close()
+            return count > 0
+        except mysql.connector.Error as e:
+            print("Error checking if ID exists:", e)
+            return False
     
     def add_recipes(self, recipe_info: dict):
         """
-        This will add the recipe into the db
+        Adds the recipe into the database.
         """
-        # generate a new, unique recipe_id
-        new_recipe_id = self.get_unique_id()
+        try:
+            cursor = self.connection.cursor()
+            new_id = self.get_unique_id()
+            if new_id is None:
+                raise Exception("Failed to generate a unique ID.")
+            query = """
+                INSERT INTO recipes (recipe_id, title, author_id, ingredients, steps, images)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                new_id,
+                recipe_info['title'],
+                recipe_info['author_id'],
+                recipe_info['ingredients'],
+                recipe_info['steps'],
+                recipe_info['images']
+            )
+            cursor.execute(query, values)
+            self.connection.commit()  # Commit the transaction
+            cursor.close()
+            return new_id
+        except mysql.connector.Error as e:
+            print("Error adding recipe to the database:", e)
+            return None
         
-        # add the new recipe info to the list
-        recipe_info["recipe_id"] = str(new_recipe_id)
-        self.recipes.append(recipe_info)
-        print('recipe_info')
-        print(recipe_info)
-
-        # save the data
-        self.save()
-        print('save')
-        
-        # return the new recipe's ID
-        return new_recipe_id
-    
     def modify_recipe_by_field(self, recipe_id, field, new_value):
         """
-        This will modify the recipe in the DB
+        Modifies a field of a recipe in the database.
         """
-        old_recipe = {}
-        # pull the recipe from the DB
-        for r in self.recipes:
-            if r.get("recipe_id") == recipe_id:
-                old_recipe = r
-                self.recipes.remove(r)
-                break
+        try:
+            cursor = self.connection.cursor()
 
-        # Handle special case for field with lists
-        if field == "steps" or field == "ingredients" or field == "images":
-            if isinstance(new_value, str):
-                # Convert a string to a list separated by commas (for example)
-                new_value = new_value.split(",")  # You might need a different delimiter
-            elif not isinstance(new_value, list):
-                # If it's neither a string nor a list, handle accordingly
-                new_value = [new_value]  # Put the single value into a list
+            # Prepare the SQL query for updating the field
+            query = "UPDATE recipes SET {} = %s WHERE recipe_id = %s".format(field)
+            cursor.execute(query, (new_value, recipe_id))
 
-        # modify the field, update, and save
-        old_recipe[field] = new_value
-        self.recipes.append(old_recipe)
-        self.save()
+            # Check if the update was successful
+            if cursor.rowcount == 0:
+                raise Exception("No rows were updated. The recipe might not exist, or the field is invalid.")
 
-        return recipe_id
+            self.connection.commit()
+            cursor.close()
+            return recipe_id
+        except mysql.connector.Error as e:
+            print("Error modifying the recipe in the database:", e)
+            return None
+        except Exception as e:
+            print(e)
+            return None
     
     def delete_recipe(self, recipe_id):
-        removed_recipe = {}
-        for r in self.recipes:
-            if r.get("recipe_id") == recipe_id:
-                removed_recipe = r
-                self.recipes.remove(r)
-                self.save()
+        """
+        Deletes a recipe from the database.
+        """
+        try:
+            cursor = self.connection.cursor()
 
-        return removed_recipe
+            # First, optionally, fetch the recipe to be deleted (if you want to return it)
+            cursor.execute("SELECT * FROM recipes WHERE recipe_id = %s", (recipe_id,))
+            removed_recipe = cursor.fetchone()
 
-    
+            # Then, perform the delete operation
+            cursor.execute("DELETE FROM recipes WHERE recipe_id = %s", (recipe_id,))
+            self.connection.commit()
+
+            cursor.close()
+            return removed_recipe  # or just return True to indicate success
+        except mysql.connector.Error as e:
+            print("Error deleting recipe from the database:", e)
+            return None  # or False to indicate failure
+
     def filter(self, objects_filter):
         filter_mappings = {
             'title': 'title',
@@ -171,32 +195,47 @@ class RecipeDataService():
             'ingredient': 'ingredients'
         }
 
-        filters = objects_filter.split(',') # go through each of the possible fields 
-        filtered_recipes = self.recipes
+        filters = objects_filter.split(',')
+        query = "SELECT * FROM recipes"
+        conditions = []
+        params = []
 
         for f in filters:
             filter_parts = f.split(':')
             if len(filter_parts) == 2 and filter_parts[0] in filter_mappings:
                 field = filter_mappings[filter_parts[0]]
                 value = filter_parts[1].lower()
-                print('field', field, 'value', value)
 
-                if field == 'ingredients':
-                    filtered_recipes = [r for r in filtered_recipes if any(value in ing.lower() for ing in r.get('ingredients'))]
-                elif field == 'author_id':
-                    filtered_recipes = [r for r in filtered_recipes if value in r.get('author_id', '').lower()]
-                elif field == 'title':
-                    filtered_recipes = [r for r in filtered_recipes if value in r.get('title', '').lower()]
+                if field in ['title', 'author_id', 'ingredients']:
+                    conditions.append(f"LOWER({field}) LIKE %s")
+                    params.append(f"%{value}%")
 
-        return filtered_recipes
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
-
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            filtered_recipes = cursor.fetchall()
+            cursor.close()
+            return filtered_recipes
+        except mysql.connector.Error as e:
+            print("Error in filtering recipes", e)
+            return []
+    
     def get_unique_id(self):
-        new_id = self.highest_recipe_id + 1
-        self.highest_recipe_id = new_id
-        print("New id: ", new_id)
-
-        return new_id
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT MAX(recipe_id) FROM recipes")
+            result = cursor.fetchone()
+            max_id = result[0] if result[0] is not None else 0
+            new_id = max_id + 1
+            return new_id
+        except mysql.connector.Error as e:
+            print("Error getting unique ID:", e)
+            return None
+        finally:
+            cursor.close()
 
 def main():
     print("----------------------------------------------")
